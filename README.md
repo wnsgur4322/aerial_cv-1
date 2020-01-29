@@ -1,7 +1,7 @@
-# Aerial_CV
+# Aerial_CV - repo for aerial team computer vision
 
-## repo for aerial team computer vision
 
+# Object Detection Notes
 ## note 1/1/20
 Junhyeok Jeong (Derek)
 - To use object detection tool, check out YOLOv3 with Pytorch
