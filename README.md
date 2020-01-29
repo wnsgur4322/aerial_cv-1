@@ -2,13 +2,13 @@
 
 ## repo for aerial team computer vision
 
-## note
+## note 1/1/20
 Junhyeok Jeong (Derek)
 - To use object detection tool, check out YOLOv3 with Pytorch
 - Recommend CUDA (good GPU) to boost real-time FPS
 - I use NVIDIA Jetson tx2 development kit and built in camera
 
-# note 1/15/20
+## note 1/15/20
 Junhyeok Jeong (Derek)
 - Jetson has an error on OpenCV (4.1.x) + YOLOv3. I guess it is architecture error.
 
@@ -20,6 +20,6 @@ Junhyeok Jeong (Derek)
 
 ## note 1/25/20
 Junhyeok Jeong (Derek)
-- Training data set with 152 images
+- Training basic shape data set with 152 images
 
-![training result](https://github.com/wnsgur4322/aerial_cv-1/152 shape-images training result.png)
+![training result](https://github.com/wnsgur4322/aerial_cv-1/blob/master/152%20shape-images%20training%20result.png)
