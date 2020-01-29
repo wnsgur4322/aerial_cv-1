@@ -21,37 +21,37 @@ def draw_detections(img, rects, thickness = 1):
         OUTPUT:
             count: Number of objects in a given frame
             distance : Calculates the distance from the rect value
-
     """
 
     count = 0
-    distancei = 0.0
+    distance_inch = 0.0
     for x, y, w, h in rects:
         print(len(rects))
 
         if len(rects) >= 0: ### Increase the value of count if there are more than one rectangle in a given frame
             count += 1
-        distancei = (2 * 3.14 * 180) / (w + h * 360) * 1000 + 3 ### Distance measuring in Inch
-        # print(distancei)
-        # distance = distancei * 2.54
+        distance_inch = (2 * 3.14 * 180) / (w + h * 360) * 1000 + 3 ### Distance measuring in Inch
+        # print(distance_inch)
+        # distance = distance_inch * 2.54 #convert to cm
         # print(distance)
         # the HOG detector returns slightly larger rectangles than the real objects.
         # so we slightly shrink the rectangles to get a nicer output.
         pad_w, pad_h = int(0.15*w), int(0.05*h)
         cv2.rectangle(img, (x+pad_w, y+pad_h), (x+w-pad_w, y+h-pad_h), (0, 255, 0), thickness)
-    return count, distancei
+    return count, distance_inch
 
 
 #load YOLO
 #net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/yolov3.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3.cfg") # Original yolov3
-net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/yolov3-tiny.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3-tiny.cfg") #Tiny Yolo
-#net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/backup/yolov3-tiny-shape_best.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3-tiny-shape.cfg") #shape dataset 
+#net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/yolov3-tiny.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3-tiny.cfg") #Tiny Yolo
+net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/backup/yolov3-tiny-shape_best152.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3-tiny-shape.cfg") #shape dataset 
 # set GPU run
 #net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
 #net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
 #load class file
 classes = []
+#with open("/home/kimchi/graspinglab/darknet/data/coco.names","r") as f:
 with open("/home/kimchi/graspinglab/darknet/data/obj.names","r") as f:
     classes = [line.strip() for line in f.readlines()]
 
@@ -65,7 +65,7 @@ colors= np.random.uniform(0,255,size=(len(classes),3))
 
 
 #loading image
-cap=cv2.VideoCapture(-1) #0 for 1st webcam
+cap=cv2.VideoCapture(2) #0 for 1st webcam
 font = cv2.FONT_HERSHEY_PLAIN
 starting_time= time.time()
 frame_id = 0
@@ -95,7 +95,7 @@ while True:
             class_id = np.argmax(scores)
             confidence = scores[class_id]
             if confidence > 0.6:
-                #onject detected
+                #object detected
                 center_x= int(detection[0]*width)
                 center_y= int(detection[1]*height)
                 w = int(detection[2]*width)
@@ -119,9 +119,16 @@ while True:
             print(i)
             #focal_length = (i * KNOWN_DISTANCE) / KNOWN_WIDTH #
             #inches = distance_to_camera(KNOWN_WIDTH, focal_length, i) #
+            
             hog = cv2.HOGDescriptor()   #
             hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())    #
-            found,w = hog.detectMultiScale(frame, winStride=(8,8), padding=(32,32), scale=1.05) #
+            found,w = hog.detectMultiScale(frame, winStride=(8,8), padding=(32,32), scale=1.00) #
+            print("found {}".format(found)) #
+            
+            get_number_of_object, get_distance= draw_detections(frame,found)
+            print(get_number_of_object, get_distance)
+            if get_number_of_object >=1 and get_distance!=0:
+                 print("{}".format(get_number_of_object)+ " " + classes[i] +" at {}".format(round(get_distance))+"Inches")
 
             x,y,w,h = boxes[i]
             label = str(classes[class_ids[i]])
