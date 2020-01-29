@@ -16,10 +16,12 @@ Junhyeok Jeong (Derek)
 Junhyeok Jeong (Derek)
 - jetson tx2 bug fixed, but too much video FPS drop
 - Use my desktop (Nvidia RTX 2070) + CUDA 10.2 in Ubuntu
-- training own data set (65 images), low loss. But, limitied only for few objects and RGB.
+- training own data set (65 images) with 53 layers, the result was low loss. But, limitied only for few objects and RGB.
 
 ## note 1/25/20
 Junhyeok Jeong (Derek)
-- Training basic shape data set with 152 images
+- Training basic shape data set with 152 images and 13 CNN layers
+
 
 ![training result](https://github.com/wnsgur4322/aerial_cv-1/blob/master/152%20shape-images%20training%20result.png)
+![training chart](https://github.com/wnsgur4322/aerial_cv-1/blob/master/chart_yolov3-tiny-shape.png)
