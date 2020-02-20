@@ -1,7 +1,11 @@
 #to do list
 # 1. object detection
-# 2. recollect data with attached camera angle and train it
+# 2. recollect data with attached camera angle and train it 
 # 3. figure out the size of object https://www.pyimagesearch.com/2016/03/28/measuring-size-of-objects-in-an-image-with-opencv/
+# 	- find pixels per metric. ex) 1 pixel = 0.001 cm
+#	- set up reference distance ex) if distance is 1m between object and camera, then 1 pixel is 0.001 cm
+#	- convert pixels of contour box into size scale.
+# 	- grasping as much as the size scale.
 
 #Written by Junhyeok Jeong
 #!/usr/bin/env python
