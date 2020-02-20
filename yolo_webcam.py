@@ -1,3 +1,8 @@
+#to do list
+# 1. object detection
+# 2. recollect data with attached camera angle and train it
+# 3. figure out the size of object https://www.pyimagesearch.com/2016/03/28/measuring-size-of-objects-in-an-image-with-opencv/
+
 #Written by Junhyeok Jeong
 #!/usr/bin/env python
 # coding: utf-8
@@ -13,6 +18,8 @@ import time
 import datetime
 import glob
 
+FOCAL_LENGTH = 3.67 # logitech c920 webcam
+
 def distance_to_camera(frame, box):
 	count = 0
 	distance_inch = 0.0
@@ -20,7 +27,7 @@ def distance_to_camera(frame, box):
 
 	if len(box) >= 0: ### Increase the value of count if there are more than one rectangle in a given frame
 			count += 1
-	distance_inch = (2 * 3.14 * 180) / (w + h * 360) * 1000 #+ 3 ### Distance measuring in Inch
+	distance_inch = (2 * FOCAL_LENGTH * 180) / (w + h * 360) * 1000 #+ 3 ### Distance measuring in Inch
 	print(distance_inch)
 		# distance = distance_inch * 2.54 #convert to cm
 		# print(distance)
@@ -43,7 +50,7 @@ def draw_detections(img, rects, thickness = 1):
 
 		if len(rects) >= 0: ### Increase the value of count if there are more than one rectangle in a given frame
 			count += 1
-		distance_inch = (2 * 3.14 * 180) / (w + h * 360) * 1000 + 3 ### Distance measuring in Inch
+		distance_inch = (2 * FOCAL_LENGTH * 180) / (w + h * 360) * 1000 + 3 ### Distance measuring in Inch
 		# print(distance_inch)
 		# distance = distance_inch * 2.54 #convert to cm
 		# print(distance)
@@ -98,7 +105,7 @@ if __name__ == "__main__":
 
 #loading image
 	#if use open cv 4.2 +, then put cv2.CAP_V4L to prevent gstreaming error
-	cap=cv2.VideoCapture(0, cv2.CAP_V4L) #0 for 1st webcam
+	cap=cv2.VideoCapture(2, cv2.CAP_V4L) #0 for 1st webcam
 
 	font = cv2.FONT_HERSHEY_PLAIN
 	starting_time= time.time()
