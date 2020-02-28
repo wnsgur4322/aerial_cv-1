@@ -21,6 +21,9 @@ import numpy as np
 import time
 import datetime
 import glob
+import math
+import serial
+import syslog
 
 FOCAL_LENGTH = 3.67 # logitech c920 webcam
 
@@ -66,6 +69,18 @@ def draw_detections(img, rects, thickness = 1):
 
 
 if __name__ == "__main__":
+	
+	#read data from arduino
+	arduino_data = serial.Serial ('/dev/ttyACM0',115200) #change comX, Serial.begin(value)
+	time.sleep(3)
+	
+	arduino_data.flush()
+    #arduino_data.write('s'.encode())     #'s', read range once
+	arduino_data.write('c'.encode())     #'c', read range continuously
+    #arduino_data.write('t'.encode())     #'t', timed measurement
+    #arduino_data.write('.'.encode())     #'.', stop measurement
+    #arduino_data.write('d'.encode())     #'d', dump corrleation record
+
 	#calibration
 	#termination crietria
 	#criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -167,9 +182,9 @@ if __name__ == "__main__":
 			if i in indexes:
 				print(i)
 				
-				hog = cv2.HOGDescriptor()   #
-				hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())    #
-				found,w = hog.detectMultiScale(frame, winStride=(8,8), padding=(32,32), scale=1.00) #
+				#hog = cv2.HOGDescriptor()   #
+				#hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())    #
+				#found,w = hog.detectMultiScale(frame, winStride=(8,8), padding=(32,32), scale=1.00) #
 				print("found ") #
 
 				#distane measurement
@@ -177,16 +192,25 @@ if __name__ == "__main__":
 				get_number_of_object, get_distance= distance_to_camera(frame, boxes[i])
 				print(get_number_of_object, get_distance)
 				if get_number_of_object >=1 and get_distance!=0:
-					print("{}".format(get_number_of_object)+ " " + classes[class_ids[i]] +" at {}".format(round(get_distance))+"Inches")
+					print("{}".format(get_number_of_object)+ " " + classes[class_ids[i]] +" at {}".format(round(get_distance))+" inches")
 				label = str(classes[class_ids[i]])
 				confidence= confidences[i]
 				color = colors[class_ids[i]]
-				#pad_w, pad_h = int(0.15*w), int(0.05*h)
+				pad_w, pad_h = int(0.15*w), int(0.05*h)
 				cv2.rectangle(frame,(x, y), (x+w, y+h), color, 2)
 				#cv2.rectangle(frame,(x + pad_w, y + pad_h), (x+w - pad_w, y+h - pad_h), color, 2)
 				
 				cv2.putText(frame, label+" "+str(round(confidence,2)),(x,y+30),font,1,(255,255,255),2)
-				cv2.putText(frame, str(round(get_distance))+" Inches", (x+150,y+30), font, 1,(255,0,0),2)
+				
+				#read data from LIDAR lite v3 HP
+				distance_cm = (arduino_data.readline().strip())
+				cv2.putText(frame, distance_cm.decode('utf-8'), (x+150,y+30), font, 1,(255,0,0),2)
+				#cv2.putText(frame, str(round(get_distance))+" Inches", (x+150,y+30), font, 1,(255,0,0),2)
+				
+				#x,y,radius = cv2.minEnclosingCircle(boxes[i])
+				center = (int(x+w/2),int(y+h/2))
+				radius = int(abs(math.tan(w/2)) * get_distance)
+				cv2.circle(frame,center,int(math.sqrt((w**2) + (h**2))/4),(0,255,0),2)
 				
 		elapsed_time = time.time() - starting_time
 		fps_cal=frame_id/elapsed_time
