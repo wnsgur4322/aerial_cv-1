@@ -69,17 +69,6 @@ def draw_detections(img, rects, thickness = 1):
 
 
 if __name__ == "__main__":
-	
-	#read data from arduino
-	#arduino_data = serial.Serial ('/dev/ttyACM0',115200) #change comX, Serial.begin(value)
-	#time.sleep(3)
-	
-	#arduino_data.flush()
-    #arduino_data.write('s'.encode())     #'s', read range once
-	#arduino_data.write('c'.encode())     #'c', read range continuously
-    #arduino_data.write('t'.encode())     #'t', timed measurement
-    #arduino_data.write('.'.encode())     #'.', stop measurement
-    #arduino_data.write('d'.encode())     #'d', dump corrleation record
 
 	#calibration
 	#termination crietria
@@ -124,11 +113,23 @@ if __name__ == "__main__":
 
 #loading image
 	#if use open cv 4.2 +, then put cv2.CAP_V4L to prevent gstreaming error
-	cap=cv2.VideoCapture(0, cv2.CAP_V4L) #0 for 1st webcam
+	cap=cv2.VideoCapture(2, cv2.CAP_V4L) #0 for 1st webcam
 
 	font = cv2.FONT_HERSHEY_PLAIN
 	starting_time= time.time()
 	frame_id = 0
+
+	#read data from arduino
+	arduino_data = serial.Serial ('/dev/ttyACM0',115200) #change comX, Serial.begin(value)
+	time.sleep(3)
+	
+	arduino_data.flush()
+    #arduino_data.write('s'.encode())     #'s', read range once
+	#arduino_data.write('c'.encode())     #'c', read range continuously
+    #arduino_data.write('t'.encode())     #'t', timed measurement
+    #arduino_data.write('.'.encode())     #'.', stop measurement
+    #arduino_data.write('d'.encode())     #'d', dump corrleation record
+
 
 	assert cap.isOpened(), 'Cannot capture source'
 
@@ -201,9 +202,12 @@ if __name__ == "__main__":
 				cv2.putText(frame, label+" "+str(round(confidence,2)),(x,y-10),font,1,(255,255,255),2)
 				
 				#read data from LIDAR lite v3 HP
-				#distance_cm = (arduino_data.readline().strip())
-				#cv2.putText(frame, distance_cm.decode('utf-8'), (x+150,y+30), font, 1,(255,255,255),2)
-				cv2.putText(frame, str(round(get_distance))+" inches", (x+140,y-10), font, 1,(255,255,255),2)
+				arduino_data.flush()
+				arduino_data.write('s'.encode())     #'s', read range once
+
+				distance_cm = arduino_data.readline().strip()
+				cv2.putText(frame, distance_cm.decode('utf-8'), (x+150,y+30), font, 1,(255,255,255),2)
+				#cv2.putText(frame, str(round(get_distance))+" inches", (x+140,y-10), font, 1,(255,255,255),2)
 				
 				#x,y,radius = cv2.minEnclosingCircle(boxes[i])
 				center = (int(x+w/2),int(y+h/2))
