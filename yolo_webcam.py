@@ -90,7 +90,7 @@ if __name__ == "__main__":
 #load YOLO
 	#net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/yolov3.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3.cfg") # Original yolov3
 	#net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/yolov3-tiny.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3-tiny.cfg") #Tiny Yolo
-	net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/backup/yolov3-tiny-shape_best.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3-tiny-shape.cfg") #shape dataset 
+	net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/backup/yolov3-tiny-shape_best152.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3-tiny-shape.cfg") #shape dataset 
 	#net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/backup/face/yolov3-tiny-face_best.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3-tiny-face.cfg") # face dataset (only me)
 # set GPU run
 	#net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
@@ -120,7 +120,7 @@ if __name__ == "__main__":
 	frame_id = 0
 
 	#read data from arduino
-	#arduino_data = serial.Serial ('/dev/ttyACM0',115200) #change comX, Serial.begin(value)
+	arduino_data = serial.Serial ('/dev/ttyACM0',9600) #change comX, Serial.begin(value)
 	#time.sleep(3)
 	
 	#arduino_data.flush()
@@ -205,14 +205,16 @@ if __name__ == "__main__":
 				#arduino_data.flush()
 				#arduino_data.write('s'.encode())     #'s', read range once
 
-				#distance_cm = arduino_data.readline().strip()
-				#cv2.putText(frame, distance_cm.decode('utf-8'), (x+150,y+30), font, 1,(255,255,255),2)
-				cv2.putText(frame, str(round(get_distance))+" inches", (x+140,y-10), font, 1,(255,255,255),2)
+				#read data from US-100 ultrasonic sensor
+				#arduino_data.flush()
+				distance_cm = arduino_data.readline().strip()
+				cv2.putText(frame, distance_cm.decode('utf-8')[1:], (x+150,y+30), font, 1,(255,255,255),2)
+				#cv2.putText(frame, str(round(get_distance))+" inches", (x+140,y-10), font, 1,(255,255,255),2)
 				
 				#x,y,radius = cv2.minEnclosingCircle(boxes[i])
 				center = (int(x+w/2),int(y+h/2))
 				radius = int(abs(math.tan(w/2)) * get_distance)
-				cv2.circle(frame,center,int(math.sqrt((w**2) + (h**2))/4),(0,255,0),2)
+				#cv2.circle(frame,center,int(math.sqrt((w**2) + (h**2))/4),(0,255,0),2)
 				
 		elapsed_time = time.time() - starting_time
 		fps_cal=frame_id/elapsed_time

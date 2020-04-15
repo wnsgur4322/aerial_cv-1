@@ -56,16 +56,24 @@ void setup()
     Wire.begin();
     #ifdef FAST_I2C
         #if ARDUINO >= 157
-            Wire.setClock(400000UL); // Set I2C frequency to 400kHz (for Arduino Due)
+            Wire.setClock(150000UL); // Set I2C frequency to 400kHz (for Arduino Due)
         #else
-            TWBR = ((F_CPU / 400000UL) - 16) / 2; // Set I2C frequency to 400kHz
+            TWBR = ((F_CPU / 150000UL) - 16) / 2; // Set I2C frequency to 400kHz
         #endif
     #endif
 
     // Configure the LidarLite internal parameters so as to lend itself to
     // various modes of operation by altering 'configure' input integer to
     // anything in the range of 0 to 5. See LIDARLite_v3HP.cpp for details.
-    myLidarLite.configure(0);
+    myLidarLite.configure(1);
+    /* case 0: Default mode, balanced performance
+       case 1: Short range, high speed
+       case 2: Default range, higher speed short range
+       case 3: maximum range
+       case 4: high sensitivity detection, high erroneous measurements
+       case 5: low sensitivity detection, low erroneous measurements
+       case 6: short range, high speed, higher error
+       */
 }
 
 
