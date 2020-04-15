@@ -5,6 +5,7 @@ import os
 import glob
 import argparse
 import time
+import json
 
 import pandas as pd
 from keras.preprocessing import image   # for preprocessing the images
@@ -41,6 +42,7 @@ except OSError:
 
 current_frame = 0
 while(True):
+    breaks
     #captrue frame by frame
     ret, frame = cap.read()
 
@@ -75,8 +77,19 @@ net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
 
 image_num = len(glob.glob1("./frames", "*.jpg"))
 print(image_num)
+json_data = {}
+json_data['localisation'] = []
+json_data['localisation'].append({
+    "thumb": "full/samples-data/examples/kf/amalia01/f_25.jpg",
+    "tc": "00:00:01.0000",
+    "tclevel": 1
+})
+
+with open('json_data.txt', 'w') as outfile:
+    json.dump(json_data, outfile)
 
 for i in range(image_num):
+    break
     # load our input image and grab its spatial dimensions
     image = cv2.imread("frames/frame%d.jpg" % i)
     (H, W) = image.shape[:2]
@@ -148,3 +161,6 @@ for i in range(image_num):
     # show the output image
     cv2.imwrite("frames/frame%d.jpg" % i, image)
     print("frame%d.jpg is created successfully" % i)
+
+
+# step 3: create json file and dump img data
