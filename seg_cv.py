@@ -3,11 +3,13 @@ import numpy as np
 import argparse
 
 arg = argparse.ArgumentParser()
+arg.add_argument('input_image')
 arg.add_argument("-c", "--confidence", type=float, default=0.5,
 	help="minimum probability to filter weak detections")
 arg.add_argument("-t", "--threshold", type=float, default=0.3,
 	help="threshold when applying non-maxima suppression")
 args = vars(arg.parse_args())
+args2 = arg.parse_args()
 
 if __name__ == "__main__":
 	#load YOLO
@@ -24,7 +26,7 @@ if __name__ == "__main__":
 	COLORS = np.random.uniform(0,255,size=(len(classes),3))
 
     # load an image and grab its spatial dimensions
-	img = cv2.imread("shape40.jpg")
+	img = cv2.imread(args2.input_image)
 	img = cv2.resize(img, (800, 600))
 	cv2.imshow('input image', img)
 
@@ -77,6 +79,14 @@ if __name__ == "__main__":
     # boxes
 	idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"], args["threshold"])
 
+	# initialize the list of threshold methods
+	methods = [
+		("THRESH_BINARY", cv2.THRESH_BINARY),
+		("THRESH_BINARY_INV", cv2.THRESH_BINARY_INV),
+		("THRESH_TRUNC", cv2.THRESH_TRUNC),
+		("THRESH_TOZERO", cv2.THRESH_TOZERO),
+		("THRESH_TOZERO_INV", cv2.THRESH_TOZERO_INV)]
+
     # ensure at least one detection exists
 	if len(idxs) > 0:
         # loop over the indexes we are keeping
@@ -86,17 +96,39 @@ if __name__ == "__main__":
 			(w, h) = (boxes[index][2], boxes[index][3])
             # draw a bounding box rectangle and label on the image
 			color = [int(c) for c in COLORS[classIDs[index]]]
-			cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
+			
+			
+			rec = cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
 			text = "{}: {:.4f}".format(classes[classIDs[index]], confidences[index])
 			cv2.putText(img, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
 			    0.5, color, 2)
+
+			roi_color = img[y:y + h, x:x+ w]
+
+			gray = cv2.cvtColor(roi_color, cv2.COLOR_BGR2GRAY)
+			cv2.imshow('grayed', gray)
+
+			# loop over the threshold methods
+			for (threshName, threshMethod) in methods:
+			# threshold the image and show it
+				(T, thresh) = cv2.threshold(gray, 150, 255, threshMethod)
+				cv2.imshow(threshName, thresh)
+
+			#edged = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+			#cv2.imshow('edged', edged)
+			
+			retval, thresh = cv2.threshold(gray, 127, 255, 0)
+			img_contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+			cv2.drawContours(roi_color, img_contours, -1, (0, 255, 0))
+
+			cv2.imshow('contours', roi_color)
+			
+
+			
+
 	
 	cv2.imshow('YOLOed image', img)
 
-    #convert graysale
-
-	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-	edged = cv2.Canny(gray, 150, 200)
-	cv2.imshow('canny edges', edged)
+	#combined = cv2.bitwise_and(edged, img)
+	#cv2.imshow('combined image', combined )
 	cv2.waitKey(0)
