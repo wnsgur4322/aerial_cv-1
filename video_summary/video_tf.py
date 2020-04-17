@@ -89,7 +89,6 @@ with open('json_data.txt', 'w') as outfile:
     json.dump(json_data, outfile)
 
 for i in range(image_num):
-    break
     # load our input image and grab its spatial dimensions
     image = cv2.imread("frames/frame%d.jpg" % i)
     (H, W) = image.shape[:2]
