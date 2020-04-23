@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import argparse
+import imutils
 
 arg = argparse.ArgumentParser()
 arg.add_argument('input_image')
@@ -10,6 +11,9 @@ arg.add_argument("-t", "--threshold", type=float, default=0.3,
 	help="threshold when applying non-maxima suppression")
 args = vars(arg.parse_args())
 args2 = arg.parse_args()
+
+def midpoint(ptA, ptB):
+	return ((ptA + ptB) * 0.5, (ptA + ptB) * 0.5)
 
 if __name__ == "__main__":
 	#load YOLO
@@ -102,10 +106,35 @@ if __name__ == "__main__":
 			text = "{}: {:.4f}".format(classes[classIDs[index]], confidences[index])
 			cv2.putText(img, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
 			    0.5, color, 2)
+			
+			# unpack the ordered bounding box, then compute the midpoint
+			# between the top-left and top-right coordinates, followed by
+			# the midpoint between bottom-left and bottom-right coordinates
+			print(x)
+			(tl, tr) = (x, y)
+			(bl, br) = (x+ w , y + h)
+			(tltrX, tltrY) = midpoint(tl, tr)
+			(blbrX, blbrY) = midpoint(bl, br)
+			# compute the midpoint between the top-left and top-right points,
+			# followed by the midpoint between the top-righ and bottom-right
+			(tlblX, tlblY) = midpoint(tl, bl)
+			(trbrX, trbrY) = midpoint(tr, br)
+			# draw the midpoints on the image
+			cv2.circle(img, (x, y), 5, (255, 0, 0), -1)
+			cv2.circle(img, (x + w, y + h), 5, (255, 0, 0), -1)
+			cv2.circle(img, (x + w, y), 5, (255, 0, 0), -1)
+			cv2.circle(img, (x, y + h), 5, (255, 0, 0), -1)
 
 			roi_color = img[y:y + h, x:x+ w]
 
 			gray = cv2.cvtColor(roi_color, cv2.COLOR_BGR2GRAY)
+			gray = cv2.GaussianBlur(gray, (5, 5), 0)
+			# threshold the image, then perform a series of erosions +
+			# dilations to remove any small regions of noise
+			thresh = cv2.threshold(gray, 45, 255, cv2.THRESH_BINARY)[1]
+			thresh = cv2.erode(thresh, None, iterations=2)
+			thresh = cv2.dilate(thresh, None, iterations=2)
+
 			cv2.imshow('grayed', gray)
 
 			# loop over the threshold methods
@@ -117,9 +146,24 @@ if __name__ == "__main__":
 			#edged = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
 			#cv2.imshow('edged', edged)
 			
-			retval, thresh = cv2.threshold(gray, 127, 255, 0)
-			img_contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+			#retval, thresh = cv2.threshold(gray, 127, 255, 0)
+			img_contours = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+			img_contours = imutils.grab_contours(img_contours)
+			c = max(img_contours, key=cv2.contourArea)
+			# determine the most extreme points along the contour
+			extLeft = tuple(c[c[:, :, 0].argmin()][0])
+			extRight = tuple(c[c[:, :, 0].argmax()][0])
+			extTop = tuple(c[c[:, :, 1].argmin()][0])
+			extBot = tuple(c[c[:, :, 1].argmax()][0])
 			cv2.drawContours(roi_color, img_contours, -1, (0, 255, 0))
+
+			cv2.circle(roi_color, extLeft, 4, (0, 0, 255), -1)
+			cv2.circle(roi_color, extRight, 4, (0, 255, 0), -1)
+			cv2.circle(roi_color, extTop, 4, (255, 0, 0), -1)
+			cv2.circle(roi_color, extBot, 4, (255, 255, 0), -1)
+
+			cv2.line(roi_color, extTop, extBot, (255,255,255), 1)
+			cv2.line(roi_color, extRight, extLeft, (255,255,255), 1)
 
 			cv2.imshow('contours', roi_color)
 			

@@ -42,7 +42,7 @@ except OSError:
 
 current_frame = 0
 while(True):
-    breaks
+    break
     #captrue frame by frame
     ret, frame = cap.read()
 
