@@ -102,10 +102,10 @@ if __name__ == "__main__":
 			color = [int(c) for c in COLORS[classIDs[index]]]
 			
 			
-			rec = cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
-			text = "{}: {:.4f}".format(classes[classIDs[index]], confidences[index])
-			cv2.putText(img, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
-			    0.5, color, 2)
+			#rec = cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
+			#text = "{}: {:.4f}".format(classes[classIDs[index]], confidences[index])
+			#cv2.putText(img, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
+			#    0.5, color, 2)
 			
 			# unpack the ordered bounding box, then compute the midpoint
 			# between the top-left and top-right coordinates, followed by
@@ -161,11 +161,22 @@ if __name__ == "__main__":
 			cv2.circle(roi_color, extRight, 4, (0, 255, 0), -1)
 			cv2.circle(roi_color, extTop, 4, (255, 0, 0), -1)
 			cv2.circle(roi_color, extBot, 4, (255, 255, 0), -1)
+			print(extBot)
 
 			cv2.line(roi_color, extTop, extBot, (255,255,255), 1)
+			top_to_bottom = extBot[1] - extTop[1]
+			cv2.putText(img, "{}".format(top_to_bottom), (extBot[1], extTop[1] + 180), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
 			cv2.line(roi_color, extRight, extLeft, (255,255,255), 1)
+			left_to_right = extRight[0] - extLeft[0] 
+			cv2.putText(img, "{}".format(left_to_right), (extLeft[0] + 220, extRight[0] + 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
 			cv2.imshow('contours', roi_color)
+
+			rec = cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
+			text = "{}: {:.4f}".format(classes[classIDs[index]], confidences[index])
+			cv2.putText(img, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
+			    0.5, color, 2)
 			
 
 			
