@@ -11,15 +11,17 @@ import os
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
+'''
 ap.add_argument("-i", "--input", required=True,
 	help="path to input video file")
 ap.add_argument("-o", "--output", required=True,
 	help="path to output video file")
+'''
 ap.add_argument("-m", "--mask-rcnn", required=True,
 	help="base path to mask-rcnn directory")
 ap.add_argument("-c", "--confidence", type=float, default=0.5,
 	help="minimum probability to filter weak detections")
-ap.add_argument("-t", "--threshold", type=float, default=0.3,
+ap.add_argument("-t", "--threshold", type=float, default=0.4,
 	help="minimum threshold for pixel-wise mask segmentation")
 args = vars(ap.parse_args())
 
@@ -48,9 +50,11 @@ net = cv2.dnn.readNetFromTensorflow(weightsPath, configPath)
 #if use open cv 4.2 +, then put cv2.CAP_V4L to prevent gstreaming error
 vs = cv2.VideoCapture(0, cv2.CAP_V4L) #0 for 1st webcam
 #vs = cv2.VideoCapture(args["input"])
-writer = None
+starting_time= time.time()
+frame_id = 0
 
 # try to determine the total number of frames in the video file
+'''
 try:
 	prop = cv2.cv.CV_CAP_PROP_FRAME_COUNT if imutils.is_cv2() \
 		else cv2.CAP_PROP_FRAME_COUNT
@@ -62,11 +66,15 @@ try:
 except:
 	print("[INFO] could not determine # of frames in video")
 	total = -1
+'''
 
 # loop over frames from the video file stream
 while True:
 	# read the next frame from the file
 	(grabbed, frame) = vs.read()
+	frame = cv2.resize(frame, (640, 480))
+
+	frame_id+=1
 
 	# if the frame was not grabbed, then we have reached the end
 	# of the stream
@@ -136,8 +144,17 @@ while True:
 			text = "{}: {:.4f}".format(LABELS[classID], confidence)
 			cv2.putText(frame, text, (startX, startY - 5),
 				cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+	
+	elapsed_time = time.time() - starting_time
+	fps_cal=frame_id/elapsed_time
+	cv2.putText(frame,"FPS:"+str(round(fps_cal,2)),(10,50),cv2.	FONT_HERSHEY_SIMPLEX,1,(0,255,0),1)
+
+	cv2.imshow('frame', frame)
+	if cv2.waitKey(1) & 0xFF == ord('q'):
+		break
 
 	# check if the video writer is None
+	'''
 	if writer is None:
 		# initialize our video writer
 		fourcc = cv2.VideoWriter_fourcc(*"MJPG")
@@ -157,4 +174,5 @@ while True:
 # release the file pointers
 print("[INFO] cleaning up...")
 writer.release()
+'''
 vs.release()
