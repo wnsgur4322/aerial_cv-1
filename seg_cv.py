@@ -17,6 +17,7 @@ def midpoint(ptA, ptB):
 
 if __name__ == "__main__":
 	#load YOLO
+	#net = cv2.dnn.readNetFromDarknet("/home/kimchi/graspinglab/darknet/cfg/yolov3.cfg","/home/kimchi/graspinglab/darknet/yolov3.weights") # Original yolov3
 	net = cv2.dnn.readNetFromDarknet("./trained_data/yolov3-tiny-shape.cfg","./trained_data/yolov3-tiny-shape_best.weights") #shape dataset 
 
 	#load class file (object label)
