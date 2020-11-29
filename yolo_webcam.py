@@ -24,6 +24,12 @@ import glob
 import math
 import serial
 import syslog
+import csv
+import os
+
+VIDEO_HEIGHT = 320
+VIDEO_WIDTH = 320
+
 
 def midpoint(ptA, ptB):
 	return ((ptA + ptB) * 0.5, (ptA + ptB) * 0.5)
@@ -114,7 +120,7 @@ def get_contours(img, imgContour, frame, x, y, w, h, roi_color):
             approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
             print(len(approx))
             x2 , y2 , w2, h2 = cv2.boundingRect(approx)
-            cv2.rectangle(frame, (x , y), (x + w , y + h), (0, 255, 0), 1)
+            cv2.rectangle(frame, (x , y), (x + w + pad_w , y + h + pad_h), (0, 255, 0), 1)
 
             cv2.putText(frame, "Points: " + str(len(approx)), (x + w + 20, y + 20), font, 0.7, (0, 255, 0), 1)
             cv2.putText(frame, "Area: " + str(int(area)), (x + w + 20, y + 45), font, 0.7, (0, 255, 0), 1)
@@ -126,8 +132,6 @@ def empty(a):
 
 
 if __name__ == "__main__":
-
-	#calibration
 	#termination crietria
 	#criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 	
@@ -150,7 +154,21 @@ if __name__ == "__main__":
 	help="segmentation threshold methods:\n0.THRESH_BINARY\n1. THRESH_BINARY_INV\n2. THRESH_TRUNC\n3. THRESH_TOZERO\n4.THRESH_TOZERO_INV")
 	ap.add_argument("-cam", "--camera_number", type=int, default=0,
 	help="0 is built-in webcam, 1 or 2 is usb webcam")
+	ap.add_argument("-csv_filename", "--name", type=str, default="data",
+	help="put your desired file name for data csv file")
 	args = vars(ap.parse_args())
+	# csv part
+	fields = ['Object', 'Distance (cm)', 'Accuracy(%)']
+
+	if os.path.exists("./"+ args["name"] + ".csv"):
+		os.remove("./"+ args["name"] + ".csv")
+		print("existed data removed")
+	else:
+		print("can not delete old csv file as it doesn't exists")
+
+	with open(args["name"] +".csv", 'w') as f:
+		csvwriter = csv.DictWriter(f, fields)
+		csvwriter.writeheader()
 
 #load YOLO
 	#net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/yolov3.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3.cfg") # Original yolov3
@@ -191,6 +209,7 @@ if __name__ == "__main__":
 	#read data from arduino
 	#arduino_data = serial.Serial ('/dev/ttyACM0',9600) #change comX, Serial.begin(value)
 	#time.sleep(3)
+	distance_in_cm = 0
 	
 	#arduino_data.flush()
     #arduino_data.write('s'.encode())     #'s', read range once
@@ -204,7 +223,7 @@ if __name__ == "__main__":
 
 	while cap.isOpened():
 		_,frame= cap.read() # 
-		frame = cv2.resize(frame, (320, 320))
+		frame = cv2.resize(frame, (VIDEO_WIDTH, VIDEO_HEIGHT))
 
 		# imgContour = frame.copy()
 		# blur = cv2.GaussianBlur(frame, (7, 7), 1)
@@ -221,7 +240,7 @@ if __name__ == "__main__":
 		height,width,channels = frame.shape
 		
 		#detecting objects
-		blob = cv2.dnn.blobFromImage(frame,0.00392,(320,320),(0,0,0),True,crop=False)    
+		blob = cv2.dnn.blobFromImage(frame,0.00392,(VIDEO_WIDTH, VIDEO_HEIGHT),(0,0,0),True,crop=False)    
 
 			
 		net.setInput(blob)
@@ -263,6 +282,8 @@ if __name__ == "__main__":
 		("THRESH_TOZERO", cv2.THRESH_TOZERO),
 		("THRESH_TOZERO_INV", cv2.THRESH_TOZERO_INV)]
 
+		label = None
+
 
 		for i in range(len(boxes)):
 			if i in indexes:
@@ -283,7 +304,7 @@ if __name__ == "__main__":
 				confidence= confidences[i]
 				color = colors[class_ids[i]]
 				pad_w, pad_h = int(0.15*w), int(0.05*h)
-				cv2.rectangle(frame,(x, y), (x+ w, y + h), color,  1)
+				cv2.rectangle(frame,(x, y), (x+ w + pad_w, y + h + pad_h), color,  1)
 				#cv2.rectangle(frame,(x + pad_w, y + pad_h), (x+w - pad_w, y+h - pad_h), color, 2)
 				
 				cv2.putText(frame, label+" "+str(round(confidence,2)),(x,y-10),font,1,(255,255,255),2)
@@ -339,7 +360,8 @@ if __name__ == "__main__":
 				#read data from US-100 ultrasonic sensor
 				#arduino_data.flush()
 				#distance_cm = arduino_data.readline().strip()
-				#cv2.putText(frame, distance_cm.decode('utf-8')[1:], (x+150,y+30), font, 1,(255,255,255),2)
+				#distance_in_cm = distance_cm.decode('utf-8')[1:]
+				#cv2.putText(frame, distance_in_cm, (x+150,y+30), font, 1,(255,255,255),2)
 				#cv2.putText(frame, str(round(get_distance))+" inches", (x+140,y-10), font, 1,(255,255,255),2)
 				
 				#x,y,radius = cv2.minEnclosingCircle(boxes[i])
@@ -350,6 +372,7 @@ if __name__ == "__main__":
 		elapsed_time = time.time() - starting_time
 		fps_cal=frame_id/elapsed_time
 		cv2.putText(frame,"FPS:"+str(round(fps_cal,2)),(10,50),font,2,(0,0,0),1)
+		cv2.putText(frame, "Press 's' to save data in data.csv", (5, VIDEO_HEIGHT - 20), font, 1, (0,255,0),1)
 		
 	#	if ret == True:
 	#		objpoints.append(objp)
@@ -362,6 +385,16 @@ if __name__ == "__main__":
 		
 		if key == 27: #esc key stops the process
 			break
+		if key == ord('s'):
+			if label != None:
+				print("-- save data -- ")
+				distance_in_cm = "10"
+				print("object : {}, distance : {} cm, accuracy : {} %".format(label, distance_in_cm, str(round(confidence,2))))
+				with open(args["name"] + ".csv", 'a') as csvfile:
+					csvwriter = csv.writer(csvfile)
+					csvwriter.writerow([label, distance_in_cm, round(confidence,2)])
+			else:
+				print("ERROR : any object doesn't be detected !!")
 
 
 	# check elasped time
