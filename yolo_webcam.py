@@ -142,6 +142,8 @@ if __name__ == "__main__":
 	imgpoints = [] # 2d points in image plane.
 
 	ap = argparse.ArgumentParser()
+	ap.add_argument("-w", "--dataset", type=str,
+	help="set object detection weight and data file (type original or tiny or shape)")
 	ap.add_argument("-c", "--confidence", type=float, default=0.5,
 	help="minimum probability to filter weak detections")
 	ap.add_argument("-t", "--threshold", type=float, default=0.3,
@@ -157,6 +159,10 @@ if __name__ == "__main__":
 	ap.add_argument("-csv_filename", "--name", type=str, default="data",
 	help="put your desired file name for data csv file")
 	args = vars(ap.parse_args())
+	if args["dataset"] == None:
+		print(args["dataset"])
+		print("Error: please set up weight and dataset file argument ex)python3 yolo_webcam.py -w tiny")
+		exit()
 	# csv part
 	fields = ['Object', 'Distance (cm)', 'Accuracy(%)']
 
@@ -170,20 +176,26 @@ if __name__ == "__main__":
 		csvwriter = csv.DictWriter(f, fields)
 		csvwriter.writeheader()
 
-#load YOLO
-	#net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/yolov3.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3.cfg") # Original yolov3
-	#net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/yolov3-tiny.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3-tiny.cfg") #Tiny Yolo
-	net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/backup/yolov3-tiny-shape_best152.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3-tiny-shape.cfg") #shape dataset 
-	#net = cv2.dnn.readNet("/home/kimchi/graspinglab/darknet/backup/face/yolov3-tiny-face_best.weights","/home/kimchi/graspinglab/darknet/cfg/yolov3-tiny-face.cfg") # face dataset (only me)
+#load YOLO	
+	if args["dataset"] == "original":
+		net = cv2.dnn.readNet("trained_data/original_yolov3/yolov3.weights","trained_data/original_yolov3/yolov3.cfg") #original Yolov3
+	if args["dataset"] == "tiny":
+		net = cv2.dnn.readNet("trained_data/tiny/yolov3-tiny.weights","trained_data/tiny/yolov3-tiny.cfg") #Tiny Yolo
+	if args["dataset"] == "shape":
+		net = cv2.dnn.readNet("trained_data/shape/yolov3-tiny-shape_best.weights","trained_data/shape/yolov3-tiny-shape.cfg") #shape dataset
+
 # set GPU run
 	#net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
 	#net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
 #load class file
 	classes = []
-	#with open("/home/kimchi/graspinglab/darknet/data/coco.names","r") as f:
-	with open("/home/kimchi/graspinglab/darknet/data/obj.names","r") as f:
-		classes = [line.strip() for line in f.readlines()]
+	if args["dataset"] == "tiny" or "original":
+		with open("trained_data/tiny/coco.names","r") as f:
+			classes = [line.strip() for line in f.readlines()]
+	if args["dataset"] == "shape":
+		with open("trained_data/shape/obj.names","r") as f:
+		    	classes = [line.strip() for line in f.readlines()]
 
 	print(classes)
 
@@ -292,7 +304,7 @@ if __name__ == "__main__":
 				#hog = cv2.HOGDescriptor()   #
 				#hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())    #
 				#found,w = hog.detectMultiScale(frame, winStride=(8,8), padding=(32,32), scale=1.00) #
-				print("found ") #
+				print("found ", str(classes[class_ids[i]])) #
 
 				#distane measurement
 				x,y,w,h = boxes[i]
@@ -319,18 +331,21 @@ if __name__ == "__main__":
 				(trbrX, trbrY) = midpoint(tr, br)
 
 				# slice only detected part
-				roi_color = frame[y : y + h + pad_h, x : x + w + pad_w]
+				try:
+					roi_color = frame[y : y + h + pad_h, x : x + w + pad_w]
 
-				# draw contours part
-				imgContour = roi_color.copy()
-				blur = cv2.GaussianBlur(roi_color, (7, 7), 1)
-				gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
-				threshold1 = cv2.getTrackbarPos("Threshold1", "Parameters")
-				threshold2 = cv2.getTrackbarPos("Threshold2", "Parameters")
-				canny = cv2.Canny(gray,threshold1,threshold2)
-				kernel = np.ones((5, 5))
-				imgDil = cv2.dilate(canny, kernel, iterations=1)
-				get_contours(imgDil, imgContour, frame, x, y, w, h, roi_color)
+					# draw contours part
+					imgContour = roi_color.copy()
+					blur = cv2.GaussianBlur(roi_color, (7, 7), 1)
+					gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
+					threshold1 = cv2.getTrackbarPos("Threshold1", "Parameters")
+					threshold2 = cv2.getTrackbarPos("Threshold2", "Parameters")
+					canny = cv2.Canny(gray,threshold1,threshold2)
+					kernel = np.ones((5, 5))
+					imgDil = cv2.dilate(canny, kernel, iterations=1)
+					get_contours(imgDil, imgContour, frame, x, y, w, h, roi_color)
+				except:
+					continue
 				# c = max(imgContour, key=cv2.contourArea)
 
 				# # determine the most extreme points along the contour
