@@ -5,6 +5,8 @@ import imutils
 
 arg = argparse.ArgumentParser()
 arg.add_argument('input_image')
+arg.add_argument("-w", "--dataset", type=str,
+	help="set object detection weight and data file (type original or tiny or shape)")
 arg.add_argument("-c", "--confidence", type=float, default=0.5,
 	help="minimum probability to filter weak detections")
 arg.add_argument("-t", "--threshold", type=float, default=0.3,
@@ -16,15 +18,28 @@ def midpoint(ptA, ptB):
 	return ((ptA + ptB) * 0.5, (ptA + ptB) * 0.5)
 
 if __name__ == "__main__":
+	if args["dataset"] == None:
+		print(args["dataset"])
+		print("Error: please set up weight and dataset file argument ex)python3 yolo_webcam.py -w tiny")
+		exit()
+    
 	#load YOLO
-	#net = cv2.dnn.readNetFromDarknet("/home/kimchi/graspinglab/darknet/cfg/yolov3.cfg","/home/kimchi/graspinglab/darknet/yolov3.weights") # Original yolov3
-	net = cv2.dnn.readNetFromDarknet("./trained_data/yolov3-tiny-shape.cfg","./trained_data/yolov3-tiny-shape_best.weights") #shape dataset 
+	if args["dataset"] == "original":
+		net = cv2.dnn.readNetFromDarknet("./trained_data/original_yolov3/yolov3.cfg","./trained_data/original_yolov3/yolov3.weights") # Original yolov3
+	if args["dataset"] == "tiny":
+		net = cv2.dnn.readNet("trained_data/tiny/yolov3-tiny.weights","trained_data/tiny/yolov3-tiny.cfg") #Tiny Yolo
+	if args["dataset"] == "shape":
+		net = cv2.dnn.readNet("trained_data/shape/yolov3-tiny-shape_best.weights","trained_data/shape/yolov3-tiny-shape.cfg") #shape dataset
+
 
 	#load class file (object label)
 	classes = []
-	#with open("/home/kimchi/graspinglab/darknet/data/coco.names","r") as f:
-	with open("/home/kimchi/graspinglab/darknet/data/obj.names","r") as f:
-		classes = [line.strip() for line in f.readlines()]
+	if args["dataset"] == "tiny" or "original":
+		with open("trained_data/tiny/coco.names","r") as f:
+			classes = [line.strip() for line in f.readlines()]
+	if args["dataset"] == "shape":
+		with open("trained_data/shape/obj.names","r") as f:
+		    	classes = [line.strip() for line in f.readlines()]
 	print(classes)
 
 	# initialize a list of colors to represent each possible class label
