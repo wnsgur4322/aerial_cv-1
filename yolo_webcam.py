@@ -146,6 +146,8 @@ if __name__ == "__main__":
 	ap = argparse.ArgumentParser()
 	ap.add_argument("-w", "--dataset", type=str,
 	help="set object detection weight and data file (type original, tiny, shape, 10_food, 46_food, 46_food_noised, 4_food)")
+	ap.add_argument("-u", "--ultrasonic", type=int, default=0,
+	help="set ultrasonic sensor usage flag to measure distance (type -u 1 or 0 ")
 	ap.add_argument("-c", "--confidence", type=float, default=0.5,
 	help="minimum probability to filter weak detections")
 	ap.add_argument("-t", "--threshold", type=float, default=0.3,
@@ -236,17 +238,18 @@ if __name__ == "__main__":
 	starting_time= time.time()
 	frame_id = 0
 
-	#read data from arduino
-	arduino_data = serial.Serial ('/dev/ttyACM0',9600) #change comX, Serial.begin(value)
-	time.sleep(3)
-	distance_in_cm = 0
-	
-	arduino_data.flush()
-		#arduino_data.write('s'.encode())		  #'s', read range once
-	arduino_data.write('c'.encode())		  #'c', read range continuously
-		#arduino_data.write('t'.encode())		  #'t', timed measurement
-		#arduino_data.write('.'.encode())		  #'.', stop measurement
-		#arduino_data.write('d'.encode())		  #'d', dump corrleation record
+	#read data from 
+	if args["ultrasonic"] == 1:
+		arduino_data = serial.Serial ('/dev/ttyACM0',9600) #change comX, Serial.begin(value)
+		time.sleep(3)
+		distance_in_cm = 0
+		
+		arduino_data.flush()
+			#arduino_data.write('s'.encode())		  #'s', read range once
+		arduino_data.write('c'.encode())		  #'c', read range continuously
+			#arduino_data.write('t'.encode())		  #'t', timed measurement
+			#arduino_data.write('.'.encode())		  #'.', stop measurement
+			#arduino_data.write('d'.encode())		  #'d', dump corrleation record
 
 
 	assert cap.isOpened(), 'Cannot capture source'
@@ -393,10 +396,11 @@ if __name__ == "__main__":
 				#cv2.circle(frame,center,int(math.sqrt((w**2) + (h**2))/4),(0,255,0),2)
 
 				#read data from US-100 ultrasonic sensor
-				arduino_data.flush()
-				distance_cm = arduino_data.readline().strip()
-				distance_in_cm = distance_cm.decode('utf-8')[1:]
-				cv2.putText(frame, distance_in_cm, (x+150,y+30), font, 1,(255,255,255),2)
+				if args["ultrasonic"] == 1:
+					arduino_data.flush()
+					distance_cm = arduino_data.readline().strip()
+					distance_in_cm = distance_cm.decode('utf-8')[1:]
+					cv2.putText(frame, distance_in_cm, (x+150,y+30), font, 1,(255,255,255),2)
 
 		elapsed_time = time.time() - starting_time
 		fps_cal=frame_id/elapsed_time
@@ -415,7 +419,16 @@ if __name__ == "__main__":
 		if key == 27: #esc key stops the process
 			break
 		if key == ord('s'):
-			if label != None:
+			if label != None and args["ultrasonic"] == 0:
+				print("-- save data -- ")
+				print("object : {}, accuracy : {} %".format(label, str(round(confidence,2))))
+				with open(args["name"] + ".csv", 'a') as csvfile:
+					csvwriter = csv.writer(csvfile)
+					csvwriter.writerow([label, round(confidence,2)])
+			else:
+				print("ERROR : any object doesn't be detected !!")
+
+			if label != None and args["ultrasonic"] == 1:
 				print("-- save data -- ")
 				print("object : {}, distance : {} cm, accuracy : {} %".format(label, distance_in_cm, str(round(confidence,2))))
 				with open(args["name"] + ".csv", 'a') as csvfile:
