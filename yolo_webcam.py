@@ -31,6 +31,7 @@ import os
 
 VIDEO_HEIGHT = 320
 VIDEO_WIDTH = 320
+FOCAL_LENGTH = 3.67			# 3.67 mm, Logitech C615 webcam
 
 
 def midpoint(ptA, ptB):
@@ -168,7 +169,8 @@ if __name__ == "__main__":
 		print("Error: please set up weight and dataset file argument ex)python3 yolo_webcam.py -w tiny")
 		exit()
 	# csv part
-	fields = ['Object', 'Distance (cm)', 'Accuracy(%)']
+	fields_ultra = ['Object', 'Distance (cm)', 'height', 'Accuracy(%)']
+	fields_non = ['Object', 'Accuracy(%)']
 
 	if os.path.exists("./"+ args["name"] + ".csv"):
 		os.remove("./"+ args["name"] + ".csv")
@@ -176,9 +178,15 @@ if __name__ == "__main__":
 	else:
 		print("can not delete old csv file as it doesn't exists")
 
-	with open(args["name"] +".csv", 'w') as f:
-		csvwriter = csv.DictWriter(f, fields)
-		csvwriter.writeheader()
+	if args["ultrasonic"] == 0:
+		with open(args["name"] +".csv", 'w') as f:
+			csvwriter = csv.DictWriter(f, fields_non)
+			csvwriter.writeheader()
+	if args["ultrasonic"] == 1:
+		with open(args["name"] +".csv", 'w') as f:
+			csvwriter = csv.DictWriter(f, fields_ultra)
+			csvwriter.writeheader()
+
 
 #load YOLO	  
 	if args["dataset"] == "original":
@@ -309,6 +317,8 @@ if __name__ == "__main__":
 		without_bounding = frame.copy()
 		food_counter = 0
 		layover_flag = 0
+		top_to_bottom = 0
+		y_axis = 0.0
 		c = [None]*100
 		for i in range(len(boxes)):
 			if i in indexes:
@@ -402,6 +412,12 @@ if __name__ == "__main__":
 					distance_in_cm = distance_cm.decode('utf-8')[1:]
 					cv2.putText(frame, distance_in_cm, (x+150,y+30), font, 1,(255,255,255),2)
 
+					# x axis (object height) formula with y axis (the distance from camera to object)
+					# Real Object Height = (Distance to Object x Object Height on sensor) / Camera Focal Length 
+					y_axis = (distance_in_cm * top_to_bottom * 0.1) / (FOCAL_LENGTH * 0.1)	# unit = cm
+					
+					
+
 		elapsed_time = time.time() - starting_time
 		fps_cal=frame_id/elapsed_time
 		cv2.putText(frame,"FPS:"+str(round(fps_cal,2)),(10,50),font,2,(0,0,0),1)
@@ -430,10 +446,10 @@ if __name__ == "__main__":
 
 			if label != None and args["ultrasonic"] == 1:
 				print("-- save data -- ")
-				print("object : {}, distance : {} cm, accuracy : {} %".format(label, distance_in_cm, str(round(confidence,2))))
+				print("object : {}, distance : {} cm, height : {} cm, accuracy : {} %".format(label, distance_in_cm, y_axis, str(round(confidence,2))))
 				with open(args["name"] + ".csv", 'a') as csvfile:
 					csvwriter = csv.writer(csvfile)
-					csvwriter.writerow([label, distance_in_cm, round(confidence,2)])
+					csvwriter.writerow([label, distance_in_cm, y_axis, round(confidence,2)])
 			else:
 				print("ERROR : any object doesn't be detected !!")
 
