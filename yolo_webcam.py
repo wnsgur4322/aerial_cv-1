@@ -410,11 +410,12 @@ if __name__ == "__main__":
 					arduino_data.flush()
 					distance_cm = arduino_data.readline().strip()
 					distance_in_cm = distance_cm.decode('utf-8')[1:]
-					cv2.putText(frame, distance_in_cm, (x+150,y+30), font, 1,(255,255,255),2)
+					cv2.putText(frame, "x axis: "+ distance_in_cm, (x+150,y+30), font, 0.7, (0, 255, 0), 1)
 
 					# x axis (object height) formula with y axis (the distance from camera to object)
 					# Real Object Height = (Distance to Object x Object Height on sensor) / Camera Focal Length 
 					y_axis = (distance_in_cm * top_to_bottom * 0.1) / (FOCAL_LENGTH * 0.1)	# unit = cm
+					cv2.putText(frame, "y axis: " + str(y_axis) + " cm", (x + w + 20, y + 60), font, 0.7, (0, 255, 0), 1)
 					
 					
 
