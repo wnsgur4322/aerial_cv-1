@@ -31,6 +31,8 @@ import os
 
 VIDEO_HEIGHT = 320
 VIDEO_WIDTH = 320
+ORIGIN_X = VIDEO_WIDTH / 2
+ORIGIN_Y = VIDEO_HEIGHT / 2
 FOCAL_LENGTH = 3.67			# 3.67 mm, Logitech C615 webcam
 
 
@@ -118,6 +120,15 @@ def get_contours(img, imgContour, frame, x, y, w, h, roi_color):
 				area = cv2.contourArea(cnt)
 				areaMin = cv2.getTrackbarPos("Area", "Parameters")
 				if area > areaMin:
+						try:
+							# compute the center of the contour
+							M = cv2.moments(cnt)
+							cX = int(M["m10"] / M["m00"])
+							cY = int(M["m01"] / M["m00"])
+							cv2.circle(roi_color, (cX, cY), 3, (255, 255, 255), -1)
+						except:
+							continue
+
 						cv2.drawContours(roi_color, cnt, -1, (255, 0, 255), 1)
 						peri = cv2.arcLength(cnt, True)
 						approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
@@ -127,7 +138,7 @@ def get_contours(img, imgContour, frame, x, y, w, h, roi_color):
 						cv2.putText(frame, "Points: " + str(len(approx)), (x + w + 20, y + 20), font, 0.7, (0, 255, 0), 1)
 						#cv2.putText(frame, "Area: " + str(int(area)), (x + w + 20, y + 45), font, 0.7, (0, 255, 0), 1)
 
-		return contours
+		return contours, cX, cY
 
 def empty(a):
 		pass
@@ -169,7 +180,7 @@ if __name__ == "__main__":
 		print("Error: please set up weight and dataset file argument ex)python3 yolo_webcam.py -w tiny")
 		exit()
 	# csv part
-	fields_ultra = ['Object', 'Distance (cm)', 'height', 'Accuracy(%)']
+	fields_ultra = ['Object', 'Distance (cm)', 'height','x axis', 'y axis', 'Accuracy(%)']
 	fields_non = ['Object', 'Accuracy(%)']
 
 	if os.path.exists("./"+ args["name"] + ".csv"):
@@ -269,6 +280,25 @@ if __name__ == "__main__":
 		
 		frame_id += 1
 		height,width,channels = frame.shape
+
+		# get center of blob image
+		# https://www.learnopencv.com/find-center-of-blob-centroid-using-opencv-cpp-python/
+		# try:
+		# 	gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+		# 	r,t = cv2.threshold(gray_image,127,255,0)
+		# 	M = cv2.moments(t)
+
+		# 	cX = int(M["m10"] / M["m00"])
+		# 	cY = int(M["m01"] / M["m00"])
+		# 	cv2.circle(frame, (cX, cY), 4, (255, 255, 255), -1)
+		
+		# except:
+		# 	continue
+
+		# center of image with white circle
+		cv2.circle(frame, (int(ORIGIN_X), int(ORIGIN_Y)), 2, (255, 255, 255), -1)
+
+
 		
 		#detecting objects
 		blob = cv2.dnn.blobFromImage(frame,0.00392,(VIDEO_WIDTH, VIDEO_HEIGHT),(0,0,0),True,crop=False)		   
@@ -318,7 +348,9 @@ if __name__ == "__main__":
 		food_counter = 0
 		layover_flag = 0
 		top_to_bottom = 0
-		y_axis = 0.0
+		object_height = 0.0
+		y_from_origin = 0.0
+		x_from_origin = 0.0
 		c = [None]*100
 		for i in range(len(boxes)):
 			if i in indexes:
@@ -344,8 +376,9 @@ if __name__ == "__main__":
 				confidence= confidences[i]
 				color = colors[class_ids[i]]
 				pad_w, pad_h = int(0.3*w), int(0.05*h)
-				cv2.rectangle(frame,(x, y), (x+ w + pad_w, y + h + pad_h), color,	 1)
-				#cv2.rectangle(frame,(x + pad_w, y + pad_h), (x+w - pad_w, y+h - pad_h), color, 2)
+				cv2.rectangle(frame,(x, y), (x + w + pad_w, y + h + pad_h), color, 1)
+				cv2.putText(frame, "x from center (pixel) : " + str(ORIGIN_X - ((x + x + w ) / 2)),(x, y + 95), font, 0.7, (255,255,255), 1)
+				cv2.putText(frame, "y from center (pixel) : " + str(ORIGIN_Y - ((y + y + h ) / 2)),(x, y + 105), font, 0.7, (255,255,255), 1)
 				
 				cv2.putText(frame, label+" "+str(round(confidence,2)),(x,y-10),font,1,(255,255,255),2)
 
@@ -362,6 +395,8 @@ if __name__ == "__main__":
 				try:
 					
 					roi_color = without_bounding[y - pad_h : y + h + pad_h, x - pad_w : x + w + pad_w]
+					#cv2.circle(frame, (y, x), 4, (0, 0, 255), -1)
+					
 
 					# draw contours part
 					imgContour = roi_color.copy()
@@ -373,10 +408,14 @@ if __name__ == "__main__":
 					kernel = np.ones((5, 5))
 					imgDil = cv2.dilate(canny, kernel, iterations=1)
 					roi_color = frame[y - pad_h : y + h + pad_h, x - pad_w : x + w + pad_w]
-					contours = get_contours(imgDil, imgContour, frame, x, y, w, h, roi_color)
+					contours, cX, cY = get_contours(imgDil, imgContour, frame, x, y, w, h, roi_color)
 					print("len:",len(contours))
 					print("area:",cv2.contourArea(contours[i]))
 					cv2.putText(frame, "Area: " + str(int(cv2.contourArea(contours[i]))), (x + w + 20, y + 45), font, 0.7, (0, 255, 0), 1)
+					# try:
+					# 	cv2.putText(frame, "y axis: " + str(math.dist((cX, cY), (160, 160))), (x + w + 20, y + 55), font, 0.7, (0, 255, 0), 1)
+					# except:
+					# 	continue
 
 					c[i] = max(contours, key=cv2.contourArea)
 					# determine the most extreme points along the contour
@@ -392,11 +431,15 @@ if __name__ == "__main__":
 					
 					cv2.line(roi_color, extTop, extBot, (255,255,255), 1)
 					top_to_bottom = extBot[1] - extTop[1]
-					cv2.putText(frame, "height: {}".format(top_to_bottom), (extBot[1], extTop[1] + 180), font, 0.7, color, 1)
+					cv2.putText(frame, "height: {}".format(top_to_bottom), (x + w + 20, y + 65), font, 0.7, color, 1)
 
 					cv2.line(roi_color, extRight, extLeft, (255,255,255), 1)
 					left_to_right = extRight[0] - extLeft[0] 
-					cv2.putText(frame, "width: {}".format(left_to_right), (extLeft[0] + 220, extRight[0] + 40), font, 0.7, color, 1)
+					cv2.putText(frame, "width: {}".format(left_to_right), (x + w + 20, y + 75), font, 0.7, color, 1)
+					
+					#cv2.circle(roi_color, (extTop - extBot) / 2 + extBot, 4, (0,255,0), -1)
+					#cv2.circle(roi_color, (extRight - extLeft) / 2 + extLeft, 4, (0,255,0), -1)
+
 				except:
 					continue
 				
@@ -414,8 +457,13 @@ if __name__ == "__main__":
 
 					# x axis (object height) formula with y axis (the distance from camera to object)
 					# Real Object Height = (Distance to Object x Object Height on sensor) / Camera Focal Length 
-					y_axis = (distance_in_cm * top_to_bottom * 0.1) / (FOCAL_LENGTH * 0.1)	# unit = cm
-					cv2.putText(frame, "y axis: " + str(y_axis) + " cm", (x + w + 20, y + 60), font, 0.7, (0, 255, 0), 1)
+					object_height = (distance_in_cm * top_to_bottom * 0.1) / (FOCAL_LENGTH * 0.1)	# unit = cm
+					cv2.putText(frame, "object height: " + str(object_height) + " cm", (x + w + 20, y + 80), font, 0.7, (0, 255, 0), 1)
+
+					# convert x & y axis in cm
+					x_from_origin = (distance_in_cm * (ORIGIN_X - ((x + x + w ) / 2)) * 0.1) / (FOCAL_LENGTH * 0.1)
+					y_from_origin = (distance_in_cm * (ORIGIN_Y - ((y + y + h ) / 2)) * 0.1) / (FOCAL_LENGTH * 0.1)
+					
 					
 					
 
@@ -447,10 +495,10 @@ if __name__ == "__main__":
 
 			if label != None and args["ultrasonic"] == 1:
 				print("-- save data -- ")
-				print("object : {}, distance : {} cm, height : {} cm, accuracy : {} %".format(label, distance_in_cm, y_axis, str(round(confidence,2))))
+				print("object : {}, distance : {} cm, height : {} cm, x & y from origin : ({},{}) cm, accuracy : {} %".format(label, distance_in_cm, object_height, x_from_origin, y_from_origin, str(round(confidence,2))))
 				with open(args["name"] + ".csv", 'a') as csvfile:
 					csvwriter = csv.writer(csvfile)
-					csvwriter.writerow([label, distance_in_cm, y_axis, round(confidence,2)])
+					csvwriter.writerow([label, distance_in_cm, object_height, x_from_origin, y_from_origin, round(confidence,2)])
 			else:
 				print("ERROR : any object doesn't be detected !!")
 
