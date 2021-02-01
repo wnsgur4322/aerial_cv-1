@@ -28,9 +28,12 @@ if platform == "linux" or platform == "linux2":
 	import syslog
 import csv
 import os
+import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider, Button, RadioButtons
+from mpl_toolkits.mplot3d import Axes3D
 
-VIDEO_HEIGHT = 320
-VIDEO_WIDTH = 320
+VIDEO_HEIGHT = 480
+VIDEO_WIDTH = 640
 ORIGIN_X = VIDEO_WIDTH / 2
 ORIGIN_Y = VIDEO_HEIGHT / 2
 FOCAL_LENGTH = 3.67			# 3.67 mm, Logitech C615 webcam
@@ -257,6 +260,36 @@ if __name__ == "__main__":
 	starting_time= time.time()
 	frame_id = 0
 
+	if cap.isOpened():
+		camera_w = cap.get(3)
+		camera_h = cap.get(4)
+		
+		#aspect ratio is the ratio of height to width
+		aspect_ratio=camera_h/camera_w
+		
+		#diagonal fov is the angle between the rays of the corner of the image
+		d_fov=78
+		#we use the aspect ratio and the diagonal fov to calculate the horizontal and vertical fovs
+		xfov=2*(np.arctan(np.tan(d_fov*np.pi/180)*np.cos(np.arctan(aspect_ratio))))
+		yfov=2*(np.arctan(np.tan(d_fov*np.pi/180)*np.sin(np.arctan(aspect_ratio))))
+		#using these, we can find the maximum values for x and y given a maximum visible depth, zmax
+		zmax=1
+		xmax=np.sin(xfov)*zmax
+		ymax=np.sin(yfov)*zmax
+		
+		#we can then put these into a scale matrix. Multiplying a point in xyz space by this matrix will get us that point in [-1,1],[-1,1],[0,1]
+		scale_mtx=np.array([[1/xmax,0,0],[0,1/ymax,0],[0,0,1/zmax]])
+		#we can invert this matrix to get us a matrix that undoes this operation
+		unscale_mtx=np.linalg.inv(scale_mtx)
+		#we then use this to transform the point 1,1,1 to the world coordinates. as a check, this should be equal to [xmax,ymax,zmax]
+		maxs=np.matmul(unscale_mtx,[1,1,1])
+
+		#we can then check to make sure our calculations worked by using trig to find the d_fov of our world system
+		print(maxs)
+		print('using cos',360/np.pi*np.arccos(maxs[-1]/(np.sqrt(maxs[0]**2+maxs[1]**2+maxs[2]**2))))
+		print('using sin',360/np.pi*np.arcsin((np.sqrt(maxs[0]**2+maxs[1]**2))/(np.sqrt(maxs[0]**2+maxs[1]**2+maxs[2]**2))))
+
+
 	#read data from 
 	if args["ultrasonic"] == 1:
 		arduino_data = serial.Serial ('/dev/ttyACM0',9600) #change comX, Serial.begin(value)
@@ -349,6 +382,7 @@ if __name__ == "__main__":
 		layover_flag = 0
 		top_to_bottom = 0
 		object_height = 0.0
+		object_width = 0.0
 		y_from_origin = 0.0
 		x_from_origin = 0.0
 		c = [None]*100
@@ -452,17 +486,40 @@ if __name__ == "__main__":
 				if args["ultrasonic"] == 1:
 					arduino_data.flush()
 					distance_cm = arduino_data.readline().strip()
-					distance_in_cm = distance_cm.decode('utf-8')[1:]
+					distance_in_cm = distance_cm.decode('utf-8')[:]
+					distance_in_cm = float(''.join(filter(str.isdigit, distance_in_cm)))
 					cv2.putText(frame, "x axis: "+ distance_in_cm, (x+150,y+30), font, 0.7, (0, 255, 0), 1)
 
 					# x axis (object height) formula with y axis (the distance from camera to object)
 					# Real Object Height = (Distance to Object x Object Height on sensor) / Camera Focal Length 
-					object_height = (distance_in_cm * top_to_bottom * 0.1) / (FOCAL_LENGTH * 0.1)	# unit = cm
+					object_height = (distance_in_cm * top_to_bottom * 0.1) / (FOCAL_LENGTH * 10)	# unit = cm
+					object_width = (distance_in_cm * left_to_right * 0.1) / (FOCAL_LENGTH * 10)	# unit = cm
 					cv2.putText(frame, "object height: " + str(object_height) + " cm", (x + w + 20, y + 80), font, 0.7, (0, 255, 0), 1)
 
 					# convert x & y axis in cm
-					x_from_origin = (distance_in_cm * (ORIGIN_X - ((x + x + w ) / 2)) * 0.1) / (FOCAL_LENGTH * 0.1)
-					y_from_origin = (distance_in_cm * (ORIGIN_Y - ((y + y + h ) / 2)) * 0.1) / (FOCAL_LENGTH * 0.1)
+					#x_from_origin = (distance_in_cm * (ORIGIN_X - ((x + x + w ) / 2)) * 0.1) / (FOCAL_LENGTH * 10)
+					#y_from_origin = (distance_in_cm * (ORIGIN_Y - ((y + y + h ) / 2)) * 0.1) / (FOCAL_LENGTH * 10)
+
+					#this updates those values from normalized (-1,1) to pixel coords
+					upix=((ORIGIN_X - ((x + x + w ) / 2)+1)*camera_w/2
+					vpix=((ORIGIN_Y - ((y + y + h ) / 2)+1)*camera_h/2
+					#this finds the x and y coordinates on a normalized world frame
+					x=(ORIGIN_X - ((x + x + w ) / 2)*distance_in_cm
+					y=(ORIGIN_Y - ((y + y + h ) / 2)*distance_in_cm
+					#this then takes those coordinates and scales them back to real world coordinates
+					coord_list=np.matmul(unscale_mtx,[x,y,distance_in_cm])
+					x,y,Z=coord_list[0],coord_list[1],coord_list[2]
+					#this adds the other end of the bar
+					extra_point=np.asarray([x + FOCAL_LENGTH, y, Z])
+					#this takes the bar's world coordinates and scales them back to normalized world coordinates
+					norm_point=np.matmul(scale_mtx,extra_point)
+					#this calculates the normalized image coordinates for the other end of the bar
+					point_u=norm_point[0]/norm_point[2]
+					point_v=norm_point[1]/norm_point[2]
+					#this converts the normalized image coordinates to pixel coordinates
+					pix_u,pix_v=(point_u+1)*camera_w/2,(point_v+1)*camera_h/2
+					x_from_origin = pix_u
+					y_from_origin = pix_v
 					
 					
 					
@@ -498,7 +555,10 @@ if __name__ == "__main__":
 				print("object : {}, distance : {} cm, height : {} cm, x & y from origin : ({},{}) cm, accuracy : {} %".format(label, distance_in_cm, object_height, x_from_origin, y_from_origin, str(round(confidence,2))))
 				with open(args["name"] + ".csv", 'a') as csvfile:
 					csvwriter = csv.writer(csvfile)
-					csvwriter.writerow([label, distance_in_cm, object_height, x_from_origin, y_from_origin, round(confidence,2)])
+					# [x0, y0, z0, w, h, shape]
+					# X0 and y0 are the center of the object, z0 is distance from camera to object. 
+					# W and h are width and height, and shape is object class
+					csvwriter.writerow([x_from_origin, y_from_origin, distance_in_cm, object_width, object_height, label, round(confidence,2)])
 			else:
 				print("ERROR : any object doesn't be detected !!")
 
